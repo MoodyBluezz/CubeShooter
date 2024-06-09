@@ -1,6 +1,9 @@
+using System;
+using System.Collections;
 using Client.Scripts.View;
 using UniRx;
 using UnityEngine;
+using UnityEngine.AI;
 using Random = UnityEngine.Random;
 
 namespace Client.Scripts.Core
@@ -14,52 +17,68 @@ namespace Client.Scripts.Core
         private const int DoubleScale = 2;
         private const float ScaleTime = 1;
         private const float AgentSpeed = 10f;
-        private const float AgentRadius = 0.2f;
         private const float DistanceOffset = 0.5f;
-        
+
+        private NavMeshAgent _agent;
+        private Vector3 _targetPosition;
+        private IDisposable _movementSubscription;
+
         public bool IsMovable { get; set; } = true;
         public CubeEater CubeEater { get; private set; }
 
+        private void Awake()
+        {
+            _agent = cubeView.CubeMeshAgent;
+        }
+
         public void StartCubesMove()
         {
-            Observable.EveryUpdate()
+            if (_movementSubscription != null)
+            {
+                _movementSubscription.Dispose();
+            }
+
+            _movementSubscription = Observable.EveryUpdate()
                 .Subscribe(_ => MoveCubes())
                 .AddTo(this);
         }
-        
+
         private void MoveCubes()
         {
-            var agent = cubeView.CubeMeshAgent;
-            agent.enabled = true;
+            if (_agent == null)
+            {
+                Debug.LogError("NavMeshAgent is not assigned!");
+                return;
+            }
+
+            _agent.enabled = true;
 
             if (IsMovable)
             {
                 cubeRigidbody.isKinematic = false;
                 cubeCollider.enabled = true;
-                agent.isStopped = false;
-                if (!agent.pathPending && agent.remainingDistance < DistanceOffset)
+                _agent.isStopped = false;
+
+                if (!_agent.pathPending && _agent.remainingDistance < DistanceOffset)
                 {
-                    agent.SetDestination(AgentDestination());
+                    SetNewDestination();
                 }
             }
             else
             {
                 cubeRigidbody.isKinematic = true;
                 cubeCollider.enabled = false;
-                agent.radius = AgentRadius;
-                agent.isStopped = true;
+                _agent.isStopped = true;
             }
         }
 
-        public void ScaleCube()
+        private void SetNewDestination()
         {
-            SetCubeEater();
-            var cubeTransform = transform;
-            cubeTransform.localScale *= DoubleScale;
-            transform.localScale = Vector3.Lerp(transform.localScale, cubeTransform.localScale, ScaleTime * Time.deltaTime);
+            _targetPosition = GenerateRandomPosition();
+            _agent.SetDestination(_targetPosition);
         }
 
-        private Vector3 AgentDestination()
+        private Vector3 GenerateRandomPosition()
         {
             var agentPosition = transform.position;
             var moveRandomPosX = Random.Range(agentPosition.x - 10, agentPosition.x + 10);
@@ -67,13 +86,35 @@ namespace Client.Scripts.Core
             return new Vector3(moveRandomPosX, agentPosition.y, moveRandomPosZ);
         }
 
-        
+        public void ScaleCube()
+        {
+            SetCubeEater();
+            var cubeTransform = transform;
+            var targetScale = cubeTransform.localScale * DoubleScale;
+            StartCoroutine(ScaleOverTime(cubeTransform, targetScale, ScaleTime));
+        }
+
+        private IEnumerator ScaleOverTime(Transform target, Vector3 toScale, float duration)
+        {
+            var currentTime = 0f;
+            var initialScale = target.localScale;
+
+            while (currentTime < duration)
+            {
+                currentTime += Time.deltaTime;
+                target.localScale = Vector3.Lerp(initialScale, toScale, currentTime / duration);
+                yield return null;
+            }
+
+            target.localScale = toScale;
+        }
+
         private void SetCubeEater()
         {
             if (GetComponent<CubeEater>() == null)
                 CubeEater = gameObject.AddComponent<CubeEater>();
             
-            cubeView.CubeMeshAgent.speed = AgentSpeed;
+            _agent.speed = AgentSpeed;
         }
 
         public void ResetMobility()

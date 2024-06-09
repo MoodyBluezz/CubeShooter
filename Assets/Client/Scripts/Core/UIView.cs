@@ -14,13 +14,13 @@ namespace Client.Scripts.Core
         private ICubeGenerator _cubeGenerator;
         private ICubeShooter _cubeShooter;
         private CubeController _cubeEater;
-        
+
         public void Initialize(ICubeGenerator cubeGenerator, ICubeShooter cubeShooter)
         {
             _cubeGenerator = cubeGenerator;
             _cubeShooter = cubeShooter;
         }
-        
+
         private void OnEnable()
         {
             createButton.onClick.AddListener(OnCreateButtonClicked);
@@ -67,12 +67,12 @@ namespace Client.Scripts.Core
             }
 
             SetCubeEater();
-            
             destroyButton.interactable = false;
         }
 
         private void SetCubeEater()
         {
+            if (_cubeGenerator.CubeControllers.Count == 0) return;
             var randomCube = Random.Range(0,_cubeGenerator.CubeControllers.Count);
             _cubeEater = _cubeGenerator.CubeControllers[randomCube];
             _cubeEater.View.CubeMover.ScaleCube();

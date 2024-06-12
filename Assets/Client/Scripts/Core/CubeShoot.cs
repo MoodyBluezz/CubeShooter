@@ -109,13 +109,13 @@ namespace Client.Scripts.Core
                 _missedCubes.Clear();
                 _hitCubes.Add(_targetCube);
                 cubeView.CubeMover.IsMovable = false;
-                bullet.BulletHit -= OnBulletHit;
             }
             else
             {
                 _isMissed = true;
                 _missedCubes.Add(_targetCube);
             }
+            bullet.BulletHit -= OnBulletHit;
         }
     }
 }

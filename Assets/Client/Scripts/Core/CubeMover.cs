@@ -8,7 +8,7 @@ using Random = UnityEngine.Random;
 
 namespace Client.Scripts.Core
 {
-    public class CubeMover : MonoBehaviour, ICubeMover
+    public class CubeMover : MonoBehaviour
     {
         [SerializeField] private Rigidbody cubeRigidbody;
         [SerializeField] private CubeView cubeView;
